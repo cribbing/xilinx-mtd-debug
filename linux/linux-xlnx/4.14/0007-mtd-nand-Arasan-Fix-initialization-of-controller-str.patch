@@ -1,0 +1,31 @@
+From 2c4ddaae9786c556485ddd4dc678abcf531d3daa Mon Sep 17 00:00:00 2001
+From: Martin Lund <malu@gomspace.com>
+Date: Thu, 16 Aug 2018 09:33:14 +0000
+Subject: [PATCH] mtd: nand: Arasan: Fix initialization of controller structure
+
+Make sure that the controller structure is initialized using the
+nand_hw_control_init() function. This way the spinlock, waitqueue
+elements etc. of the structure will be correctly initialized.
+
+Without this fix the nand driver have been seen stalling, especially
+when stress tested.
+---
+ drivers/mtd/nand/arasan_nand.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/nand/arasan_nand.c b/drivers/mtd/nand/arasan_nand.c
+index 6bbab8bf7830..a9a739e3b4e1 100644
+--- a/drivers/mtd/nand/arasan_nand.c
++++ b/drivers/mtd/nand/arasan_nand.c
+@@ -1019,7 +1019,7 @@ static int anfc_probe(struct platform_device *pdev)
+ 	if (!nfc)
+ 		return -ENOMEM;
+ 
+-	init_waitqueue_head(&nfc->controller.wq);
++	nand_hw_control_init(&nfc->controller);
+ 	INIT_LIST_HEAD(&nfc->chips);
+ 	init_completion(&nfc->event);
+ 	nfc->dev = &pdev->dev;
+-- 
+2.17.1
+

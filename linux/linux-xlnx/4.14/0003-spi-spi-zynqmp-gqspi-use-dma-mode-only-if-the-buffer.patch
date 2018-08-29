@@ -1,0 +1,48 @@
+From c3ad4b9f92cef73b118446312f39f2dbe9fc0ff1 Mon Sep 17 00:00:00 2001
+From: Tejas Prajapati Rameshchandra <tejas.prajapati.rameshchandra@xilinx.com>
+Date: Tue, 15 May 2018 18:07:17 +0530
+Subject: [PATCH] spi: spi-zynqmp-gqspi: use dma mode only if the buffer is not
+ vmalloced
+
+As per the kernel documentation the buffer to be used with dma
+should not be vmalloced due to the fact that if buffer is vmalloced
+then page entries are not consistent in physical pages. That would
+lead to failure cases in dma. This patch adds condition to check
+if the buffer to be read is vmalloced or not if not vmalloced then
+uses dma mode otherwise io mode.
+
+Signed-off-by: Tejas Prajapati Rameshchandra <tejas.prajapati.rameshchandra@xilinx.com>
+Signed-off-by: Michal Simek <michal.simek@xilinx.com>
+---
+ drivers/spi/spi-zynqmp-gqspi.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/spi/spi-zynqmp-gqspi.c b/drivers/spi/spi-zynqmp-gqspi.c
+index 2a82ba184be2..8902ce7290be 100644
+--- a/drivers/spi/spi-zynqmp-gqspi.c
++++ b/drivers/spi/spi-zynqmp-gqspi.c
+@@ -833,7 +833,8 @@ static void zynq_qspi_setuprxdma(struct zynqmp_qspi *xqspi)
+ 	u64 dma_align =  (u64)(uintptr_t)xqspi->rxbuf;
+ 
+ 	if (((xqspi->bytes_to_receive < 8) || (xqspi->io_mode)) ||
+-		((dma_align & GQSPI_DMA_UNALIGN) != 0x0)) {
++		((dma_align & GQSPI_DMA_UNALIGN) != 0x0) ||
++		is_vmalloc_addr(xqspi->rxbuf)) {
+ 		/* Setting to IO mode */
+ 		config_reg = zynqmp_gqspi_read(xqspi, GQSPI_CONFIG_OFST);
+ 		config_reg &= ~GQSPI_CFG_MODE_EN_MASK;
+@@ -848,8 +849,10 @@ static void zynq_qspi_setuprxdma(struct zynqmp_qspi *xqspi)
+ 
+ 	addr = dma_map_single(xqspi->dev, (void *)xqspi->rxbuf,
+ 						rx_bytes, DMA_FROM_DEVICE);
+-	if (dma_mapping_error(xqspi->dev, addr))
++	if (dma_mapping_error(xqspi->dev, addr)) {
+ 		dev_err(xqspi->dev, "ERR:rxdma:memory not mapped\n");
++		return;
++	}
+ 
+ 	xqspi->dma_rx_bytes = rx_bytes;
+ 	xqspi->dma_addr = addr;
+-- 
+2.17.0
+
