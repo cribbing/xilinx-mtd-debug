@@ -1,0 +1,95 @@
+From 2666067fdba26a0a87cf50bb38f5a73aabd0f517 Mon Sep 17 00:00:00 2001
+From: Aaron Sierra <asierra@xes-inc.com>
+Date: Tue, 5 Dec 2017 12:13:44 -0600
+Subject: [PATCH] mtd: spi-nor: Check that BP bits are set properly
+
+Previously, the lock and unlock functions returned success even if the
+BP bits were not actually updated in the status register due to
+hardware write protection. Introduce write_sr_and_check() to write and
+read back the status register to ensure the desired BP bits are
+actually set as requested.
+
+Signed-off-by: Joe Schultz <jschultz@xes-inc.com>
+Signed-off-by: Aaron Sierra <asierra@xes-inc.com>
+Signed-off-by: Cyrille Pitchen <cyrille.pitchen@wedev4u.fr>
+---
+ drivers/mtd/spi-nor/spi-nor.c | 35 +++++++++++++++++++++++------------
+ 1 file changed, 23 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/mtd/spi-nor/spi-nor.c b/drivers/mtd/spi-nor/spi-nor.c
+index 07d040ff574b..1e4b4dfe26b5 100644
+--- a/drivers/mtd/spi-nor/spi-nor.c
++++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -566,6 +566,27 @@ static int spi_nor_erase(struct mtd_info *mtd, struct erase_info *instr)
+ 	return ret;
+ }
+ 
++/* Write status register and ensure bits in mask match written values */
++static int write_sr_and_check(struct spi_nor *nor, u8 status_new, u8 mask)
++{
++	int ret;
++
++	write_enable(nor);
++	ret = write_sr(nor, status_new);
++	if (ret)
++		return ret;
++
++	ret = spi_nor_wait_till_ready(nor);
++	if (ret)
++		return ret;
++
++	ret = read_sr(nor);
++	if (ret < 0)
++		return ret;
++
++	return ((ret & mask) != (status_new & mask)) ? -EIO : 0;
++}
++
+ static void stm_get_locked_range(struct spi_nor *nor, u8 sr, loff_t *ofs,
+ 				 uint64_t *len)
+ {
+@@ -664,7 +685,6 @@ static int stm_lock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ 	loff_t lock_len;
+ 	bool can_be_top = true, can_be_bottom = nor->flags & SNOR_F_HAS_SR_TB;
+ 	bool use_top;
+-	int ret;
+ 
+ 	status_old = read_sr(nor);
+ 	if (status_old < 0)
+@@ -728,11 +748,7 @@ static int stm_lock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ 	if ((status_new & mask) < (status_old & mask))
+ 		return -EINVAL;
+ 
+-	write_enable(nor);
+-	ret = write_sr(nor, status_new);
+-	if (ret)
+-		return ret;
+-	return spi_nor_wait_till_ready(nor);
++	return write_sr_and_check(nor, status_new, mask);
+ }
+ 
+ /*
+@@ -749,7 +765,6 @@ static int stm_unlock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ 	loff_t lock_len;
+ 	bool can_be_top = true, can_be_bottom = nor->flags & SNOR_F_HAS_SR_TB;
+ 	bool use_top;
+-	int ret;
+ 
+ 	status_old = read_sr(nor);
+ 	if (status_old < 0)
+@@ -816,11 +831,7 @@ static int stm_unlock(struct spi_nor *nor, loff_t ofs, uint64_t len)
+ 	if ((status_new & mask) > (status_old & mask))
+ 		return -EINVAL;
+ 
+-	write_enable(nor);
+-	ret = write_sr(nor, status_new);
+-	if (ret)
+-		return ret;
+-	return spi_nor_wait_till_ready(nor);
++	return write_sr_and_check(nor, status_new, mask);
+ }
+ 
+ /*
+-- 
+2.18.0
+

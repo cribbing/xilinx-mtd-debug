@@ -1,0 +1,25 @@
+From 1ede415ccf92a1bf59c37ffa19b263c33533f1b2 Mon Sep 17 00:00:00 2001
+From: Martin Lund <malu@gomspace.com>
+Date: Mon, 20 Aug 2018 12:04:00 +0000
+Subject: [PATCH] spi: Increase SPI transfer timeout value
+
+---
+ drivers/spi/spi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
+index 12153c67ab1d..351dac51073d 100644
+--- a/drivers/spi/spi.c
++++ b/drivers/spi/spi.c
+@@ -1042,7 +1042,7 @@ static int spi_transfer_one_message(struct spi_controller *ctlr,
+ 				ret = 0;
+ 				ms = 8LL * 1000LL * xfer->len;
+ 				do_div(ms, xfer->speed_hz);
+-				ms += ms + 200; /* some tolerance */
++				ms += ms + 2000; /* some tolerance */
+ 
+ 				if (ms > UINT_MAX)
+ 					ms = UINT_MAX;
+-- 
+2.17.1
+

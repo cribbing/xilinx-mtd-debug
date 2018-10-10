@@ -1,0 +1,25 @@
+From b5152bc14599623f943302bba78e7d5d967b83c5 Mon Sep 17 00:00:00 2001
+From: Martin Lund <malu@gomspace.com>
+Date: Mon, 20 Aug 2018 12:28:29 +0000
+Subject: [PATCH] spi: zynqmp-gqspi: Increase chip select timeout value
+
+---
+ drivers/spi/spi-zynqmp-gqspi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/spi/spi-zynqmp-gqspi.c b/drivers/spi/spi-zynqmp-gqspi.c
+index b2b182f29a24..b84fde88fe09 100644
+--- a/drivers/spi/spi-zynqmp-gqspi.c
++++ b/drivers/spi/spi-zynqmp-gqspi.c
+@@ -512,7 +512,7 @@ static void zynqmp_qspi_chipselect(struct spi_device *qspi, bool is_high)
+ 			zynqmp_gqspi_read(xqspi, GQSPI_CONFIG_OFST) |
+ 			GQSPI_CFG_START_GEN_FIFO_MASK);
+ 
+-	timeout = jiffies + msecs_to_jiffies(1000);
++	timeout = jiffies + msecs_to_jiffies(10000);
+ 
+ 	/* Wait until the generic FIFO command is empty */
+ 	do {
+-- 
+2.17.1
+

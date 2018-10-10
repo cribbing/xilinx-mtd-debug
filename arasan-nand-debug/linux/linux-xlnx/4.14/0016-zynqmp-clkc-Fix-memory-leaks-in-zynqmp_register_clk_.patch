@@ -1,0 +1,42 @@
+From aa74c97483bceed2e28802ee58a0afbf696bc873 Mon Sep 17 00:00:00 2001
+From: Martin Lund <malu@gomspace.com>
+Date: Tue, 9 Oct 2018 10:36:38 +0000
+Subject: [PATCH] zynqmp: clkc: Fix memory leaks in
+ zynqmp_register_clk_topology()
+
+Any strings allocated via kasprintf() should be freed after use. In this
+case, free all strings referenced by clk_out.
+
+Signed-off-by: Martin Lund <malu@gomspace.com>
+---
+ drivers/clk/zynqmp/clkc.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/zynqmp/clkc.c b/drivers/clk/zynqmp/clkc.c
+index f4b5d158a1bf..3209b679f1fe 100644
+--- a/drivers/clk/zynqmp/clkc.c
++++ b/drivers/clk/zynqmp/clkc.c
+@@ -468,6 +468,7 @@ static struct clk *zynqmp_register_clk_topology(int clk_id, char *clk_name,
+ 	char *clk_out = NULL;
+ 	struct clock_topology *nodes;
+ 	struct clk *clk = NULL;
++	void *clk_out_ref[num_parents];
+ 
+ 	nodes = clock[clk_id].node;
+ 	num_nodes = clock[clk_id].num_nodes;
+@@ -526,8 +527,11 @@ static struct clk *zynqmp_register_clk_topology(int clk_id, char *clk_name,
+ 				     __func__, clk_name, PTR_ERR(clk));
+ 
+ 		parent_names[0] = clk_out;
++		clk_out_ref[j] = clk_out;
+ 	}
+-	kfree(clk_out);
++
++	for (j = 0; j < num_nodes; j++)
++		kfree(clk_out_ref[j]);
+ 	return clk;
+ }
+ 
+-- 
+2.19.1
+

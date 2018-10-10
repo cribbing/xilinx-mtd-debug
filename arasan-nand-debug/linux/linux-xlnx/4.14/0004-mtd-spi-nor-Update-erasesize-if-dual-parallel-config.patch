@@ -1,0 +1,36 @@
+From 7a690a5b01beb64eb8107a61eefd68da24818f59 Mon Sep 17 00:00:00 2001
+From: Tejas Prajapati Rameshchandra <tejaspra@xilinx.com>
+Date: Tue, 8 May 2018 11:21:50 +0530
+Subject: [LINUX PATCH] mtd: spi-nor: Update erasesize if dual parallel
+ configuration.
+
+For UBIFS we are using 64KB erase size that becomes 128KB for
+dual parallel configuration. With the introduction of SFDP
+the erase size is not updating as expected for dual parallel
+configuration. This patch updates the erase size in dual
+parallel configuration.
+
+Signed-off-by: Tejas Prajapati Rameshchandra <tejas.prajapati.rameshchandra@xilinx.com>
+---
+BRANCH: master-next-test
+---
+ drivers/mtd/spi-nor/spi-nor.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mtd/spi-nor/spi-nor.c b/drivers/mtd/spi-nor/spi-nor.c
+index 82c3bbb..bf1fc08 100644
+--- a/drivers/mtd/spi-nor/spi-nor.c
++++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -3271,6 +3271,9 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
+ 	if (info->flags & USE_CLSR)
+ 		nor->flags |= SNOR_F_USE_CLSR;
+ 
++	if (nor->shift)
++		mtd->erasesize = info->sector_size;
++
+ #ifdef CONFIG_MTD_SPI_NOR_USE_4K_SECTORS
+ 	/* prefer "small sector" erase if possible */
+ 	if (nor->shift &&
+-- 
+2.1.1
+
